@@ -190,9 +190,7 @@ def main():
 
             def get_completions(self, document, complete_event):
                 for match in [entry.title for entry in enpass.search_entries(document.text)]:
-                    yield Completion(match,
-                                     start_position=-len(document.text),
-                                     style='bg:ansibrightblack fg:ansimagenta')
+                    yield Completion(match, start_position=-len(document.text))
     except EnpassDatabaseError:
         LOGGER.error(('Could not read or decrypt the database. '
                       'Please validate that the path provided is a valid enpass database, '
