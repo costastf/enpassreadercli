@@ -40,7 +40,7 @@ import coloredlogs
 from enpassreaderlib import EnpassDB
 from enpassreaderlib.enpassreaderlibexceptions import EnpassDatabaseError
 from prompt_toolkit import prompt
-from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.completion import Completer, Completion, FuzzyCompleter
 
 
 __author__ = '''Costas Tyfoxylos <costas.tyf@gmail.com>'''
@@ -140,6 +140,10 @@ def get_arguments():
                        help="Interactively search for an entry in the database and return that password.",
                        action="store_true",
                        dest='search')
+    group.add_argument("-f", "--fuzzy-search",
+                       help="Interactively fuzzy search for an entry in the database and return that password.",
+                       action="store_true",
+                       dest='fuzzy')
     args = parser.parse_args()
     return args
 
@@ -196,14 +200,23 @@ def main():
                       'Please validate that the path provided is a valid enpass database, '
                       'and that the provided password and optionally key file are correct.'))
         raise SystemExit(1)
-    if args.entry:
-        print(enpass.get_entry(args.entry).password)
-    elif args.list:
+    if args.list:
         for entry in enpass.entries:
             print(f'{entry.title}: {entry.password}')
-    elif args.search:
-        entry = prompt('Name :', completer=EnpassCompleter())
-        print(enpass.get_entry(entry).password)
+            raise SystemExit(0)
+    if args.entry:
+        entry_title = args.entry
+    elif args.search or args.fuzzy:
+        try:
+            entry_title = prompt('Title :',
+                                 completer=EnpassCompleter() if args.search else FuzzyCompleter(EnpassCompleter()))
+        except KeyboardInterrupt:
+            raise SystemExit(0)
+    entry = enpass.get_entry(entry_title)
+    if not entry:
+        LOGGER.error(f'No password entry found with title of "{entry_title}".')  # pylint: disable=logging-fstring-interpolation
+        raise SystemExit(1)
+    print(entry.password)
     raise SystemExit(0)
 
 

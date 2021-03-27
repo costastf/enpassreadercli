@@ -75,6 +75,8 @@ To use enpassreadercli from the console:
       -e, --enumerate       List all the passwords in the database.
       -s, --search          Interactively search for an entry in the database and
                             return that password.
+      -f, --fuzzy-search    Interactively fuzzy search for an entry in the
+                            database and return that password.
 
 
     # Getting one password
@@ -90,7 +92,12 @@ To use enpassreadercli from the console:
 
     # Search interactively for a password
     enpass-reader -d PATH_TO_DATABASE -p PASSWORD -s
-    > Name : (interactive prompt with wildcard searching and autocompletion
+    > Title : (interactive prompt with wildcard searching and autocompletion
     # after choosing a password from the autocompleted list
     > password-value-for-search-entry
 
+    # Search interactively with fuzzy search for a password
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -f
+    > Title : (interactive prompt with fuzzy searching and autocompletion
+    # after choosing a password from the autocompleted list
+    > password-value-for-search-entry
