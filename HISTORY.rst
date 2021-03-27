@@ -19,3 +19,9 @@ History
 ------------------
 
 * Reverted to default styling for search function.
+
+
+0.2.0 (27-03-2021)
+------------------
+
+* Added fuzzy searching capabilities.
