@@ -34,9 +34,63 @@ To develop on enpassreadercli:
     _CI/scripts/document.py
 
 
-To use enpassreadercli in a project:
+To use enpassreadercli from the console:
 
-.. code-block:: python
+.. code-block:: bash
 
-    from enpassreadercli import Enpassreadercli
-    enpassreadercli = Enpassreadercli()
+    # Environment variables supported for required default arguments are:
+    #
+    # ENPASS_DB_PATH for the database path
+    # ENPASS_DB_PASSWORD for the database password
+    # ENPASS_DB_KEY_FILE for the key file if used.
+    #
+    # if any of the above are set the arguments can be omitted from the cli.
+
+    enpass-reader --help
+    usage: enpass-reader [-h] [--log-config LOGGER_CONFIG]
+                              [--log-level {debug,info,warning,error,critical}] -d
+                              PATH -p PASSWORD [-k KEY_FILE] (-g ENTRY | -e | -s)
+
+    A cli to access enpass 6 encrypted databases and read, list and search values.
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --log-config LOGGER_CONFIG, -l LOGGER_CONFIG
+                            The location of the logging config json file
+      --log-level {debug,info,warning,error,critical}, -L {debug,info,warning,error,critical}
+                            Provide the log level. Defaults to info.
+      -d PATH, --database-path PATH
+                            Specify the path to the enpass database. (Can also be
+                            specified using "ENPASS_DB_PATH" environment variable)
+      -p PASSWORD, --database-password PASSWORD
+                            Specify the password to the enpass database. (Can also
+                            be specified using "ENPASS_DB_PASSWORD" environment
+                            variable)
+      -k KEY_FILE, --database-key-file KEY_FILE
+                            Specify the path to the enpass database key file if
+                            used. (Can also be specified using
+                            "ENPASS_DB_KEY_FILE" environment variable)
+      -g ENTRY, --get ENTRY
+                            The name of the entry to get the password of.
+      -e, --enumerate       List all the passwords in the database.
+      -s, --search          Interactively search for an entry in the database and
+                            return that password.
+
+
+    # Getting one password
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -g some-password-name
+    > password-value
+
+    # Enumerate all passwords
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -e
+    > password1-name: password1-value
+    > password2-name: password2-value
+    > password3-name: password3-value
+    > password4-name: password4-value
+
+    # Search interactively for a password
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -s
+    > Name : (interactive prompt with wildcard searching and autocompletion
+    # after choosing a password from the autocompleted list
+    > password-value-for-search-entry
+

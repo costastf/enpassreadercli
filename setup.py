@@ -45,7 +45,7 @@ setup(
                    'console_scripts': [
                        # enable this to automatically generate a script in /usr/local/bin called myscript that points to your
                        #  enpassreadercli.enpassreadercli:main method
-                       # 'myscript = enpassreadercli.enpassreadercli:main'
+                       'enpass-reader = enpassreadercli.enpassreadercli:main'
                    ]},
     classifiers=[
         'Development Status :: 4 - Beta',
