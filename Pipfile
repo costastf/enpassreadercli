@@ -23,7 +23,7 @@ toml = "~=0.10.0"
 
 [packages]
 
-coloredlogs = "~=10.0"
-enpassreaderlib = "~=0.1.1"
-prompt-toolkit = "~=3.0.18"
+coloredlogs = ">=10.0"
+enpassreaderlib = ">=0.1"
+prompt-toolkit = ">=3.0"
 
