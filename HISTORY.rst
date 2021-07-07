@@ -25,3 +25,9 @@ History
 ------------------
 
 * Added fuzzy searching capabilities.
+
+
+0.2.1 (07-07-2021)
+------------------
+
+* Added pipeline and bumped dependencies.
