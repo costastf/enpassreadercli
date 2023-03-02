@@ -37,6 +37,7 @@ import os
 import json
 import argparse
 import coloredlogs
+import pyotp
 from enpassreaderlib import EnpassDB
 from enpassreaderlib.enpassreaderlibexceptions import EnpassDatabaseError
 from prompt_toolkit import prompt
@@ -125,7 +126,7 @@ def get_arguments():
                         default='')
     parser.add_argument('-t',
                         '--totp',
-                        help='If set then the value returned for the entry is going to he the totp seed if set.',
+                        help='If set then the value returned for the entry is going to be the totp if seed is set.',
                         dest='totp',
                         action='store_true')
     parser.add_argument('-n',
@@ -209,7 +210,8 @@ def main():
         raise SystemExit(1) from None
     if args.list:
         for entry in enpass.entries:
-            print(f'{entry.title}: {entry.totp_seed if args.totp else entry.password}')
+            print(f'{entry.title}: '
+                  f'{pyotp.TOTP(entry.totp_seed.replace(" ", "")).now() if args.totp else entry.password}')
         raise SystemExit(0)
     if args.entry:
         entry_title = args.entry
@@ -223,7 +225,7 @@ def main():
     if not entry:
         LOGGER.error(f'No password entry found with title of "{entry_title}".')
         raise SystemExit(1) from None
-    print(entry.totp_seed if args.totp else entry.password)
+    print(pyotp.TOTP(entry.totp_seed.replace(" ", "")).now() if args.totp else entry.password)
     raise SystemExit(0) from None
 
 

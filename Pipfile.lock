@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "be6db86bd783785dfe875bcd819e12e0d7390d9d187a593155ff1d5f7efb7cc3"
+            "sha256": "c1e0c62a456f740cc93fce317e96f3719325653ef40dd92666b4eac435695c00"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -24,7 +24,8 @@
         },
         "enpassreaderlib": {
             "hashes": [
-                "sha256:05b10327346e9f88ad875bcd43743505d464cb55af6490be64cfbc95d49f2b1d"
+                "sha256:05b10327346e9f88ad875bcd43743505d464cb55af6490be64cfbc95d49f2b1d",
+                "sha256:94ca4065322bc3b551be0bf43f3cce601fa13ffc5846e7c173b3ee4b1a87c1d3"
             ],
             "index": "pypi",
             "version": "==0.2.2"
@@ -83,6 +84,14 @@
             ],
             "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
             "version": "==3.17"
+        },
+        "pyotp": {
+            "hashes": [
+                "sha256:889d037fdde6accad28531fc62a790f089e5dfd5b638773e9ee004cce074a2e5",
+                "sha256:c2f5e17d9da92d8ec1f7de6331ab08116b9115adbabcba6e208d46fc49a98c5a"
+            ],
+            "index": "pypi",
+            "version": "==2.8.0"
         },
         "pysqlcipher3": {
             "hashes": [
