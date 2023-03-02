@@ -37,3 +37,9 @@ History
 ------------------
 
 * Implement totp retrieval.
+
+
+0.3.1 (02-03-2023)
+------------------
+
+* Calculate actual totp from provided seed and return that.
