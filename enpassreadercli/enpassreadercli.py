@@ -131,7 +131,7 @@ def get_arguments():
                         action='store_true')
     parser.add_argument('-n',
                         '--no-totp',
-                        help='If set then the value returned for the entry is going to he the password.',
+                        help='If set then the value returned for the entry is going to he the password. (The default.)',
                         dest='totp',
                         action='store_false')
     group = parser.add_mutually_exclusive_group(required=True)
