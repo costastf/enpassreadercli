@@ -31,3 +31,9 @@ History
 ------------------
 
 * Added pipeline and bumped dependencies.
+
+
+0.3.0 (02-03-2023)
+------------------
+
+* Implement totp retrieval.
