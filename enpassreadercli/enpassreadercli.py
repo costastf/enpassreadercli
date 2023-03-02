@@ -42,7 +42,6 @@ from enpassreaderlib.enpassreaderlibexceptions import EnpassDatabaseError
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import Completer, Completion, FuzzyCompleter
 
-
 __author__ = '''Costas Tyfoxylos <costas.tyf@gmail.com>'''
 __docformat__ = '''google'''
 __date__ = '''27-03-2021'''
@@ -53,14 +52,13 @@ __maintainer__ = '''Costas Tyfoxylos'''
 __email__ = '''<costas.tyf@gmail.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
-
 # This is the main prefix used for logging
 LOGGER_BASENAME = '''enpassreadercli'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class DefaultVariable(argparse.Action):  # pylint: disable=too-few-public-methods
+class DefaultVariable(argparse.Action):
     """Creates an action that looks up a variable in the environment."""
 
     # based on https://stackoverflow.com/questions/24104827/
@@ -71,9 +69,7 @@ class DefaultVariable(argparse.Action):  # pylint: disable=too-few-public-method
                 default = os.environ[variable]
         if required and default:
             required = False
-        super(DefaultVariable, self).__init__(default=default,
-                                              required=required,
-                                              **kwargs)
+        super().__init__(default=default, required=required, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, values)
@@ -106,15 +102,15 @@ def get_arguments():
                                  'error',
                                  'critical'])
     parser.add_argument('-d', '--database-path',
-                        help=("Specify the path to the enpass database. "
-                              "(Can also be specified using \"ENPASS_DB_PATH\" environment variable)"),
+                        help=('Specify the path to the enpass database. '
+                              '(Can also be specified using "ENPASS_DB_PATH" environment variable)'),
                         dest='path',
                         action=DefaultVariable,
                         variable='ENPASS_DB_PATH',
                         required=True)
     parser.add_argument('-p', '--database-password',
-                        help=("Specify the password to the enpass database. "
-                              "(Can also be specified using \"ENPASS_DB_PASSWORD\" environment variable)"),
+                        help=('Specify the password to the enpass database. '
+                              '(Can also be specified using "ENPASS_DB_PASSWORD" environment variable)'),
                         dest='password',
                         action=DefaultVariable,
                         variable='ENPASS_DB_PASSWORD',
@@ -127,6 +123,16 @@ def get_arguments():
                         variable='ENPASS_DB_KEY_FILE',
                         required=False,
                         default='')
+    parser.add_argument('-t',
+                        '--totp',
+                        help='If set then the value returned for the entry is going to he the totp seed if set.',
+                        dest='totp',
+                        action='store_true')
+    parser.add_argument('-n',
+                        '--no-totp',
+                        help='If set then the value returned for the entry is going to he the password.',
+                        dest='totp',
+                        action='store_false')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-g", "--get",
                        help="The name of the entry to get the password of.",
@@ -144,6 +150,7 @@ def get_arguments():
                        help="Interactively fuzzy search for an entry in the database and return that password.",
                        action="store_true",
                        dest='fuzzy')
+    parser.set_defaults(totp=False)
     args = parser.parse_args()
     return args
 
@@ -166,13 +173,13 @@ def setup_logging(level, config_file=None):
         # catching in case the file is not there and everything. Proper IO
         # handling is not shown here.
         try:
-            with open(config_file) as conf_file:
+            with open(config_file, encoding='utf-8') as conf_file:
                 configuration = json.loads(conf_file.read())
                 # Configure the logger
                 logging.config.dictConfig(configuration)
         except ValueError:
             print(f'File "{config_file}" is not valid json, cannot continue.')
-            raise SystemExit(1)
+            raise SystemExit(1) from None
     else:
         coloredlogs.install(level=level.upper())
 
@@ -199,11 +206,11 @@ def main():
         LOGGER.error(('Could not read or decrypt the database. '
                       'Please validate that the path provided is a valid enpass database, '
                       'and that the provided password and optionally key file are correct.'))
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     if args.list:
         for entry in enpass.entries:
-            print(f'{entry.title}: {entry.password}')
-            raise SystemExit(0)
+            print(f'{entry.title}: {entry.totp_seed if args.totp else entry.password}')
+        raise SystemExit(0)
     if args.entry:
         entry_title = args.entry
     elif args.search or args.fuzzy:
@@ -211,13 +218,13 @@ def main():
             entry_title = prompt('Title :',
                                  completer=EnpassCompleter() if args.search else FuzzyCompleter(EnpassCompleter()))
         except KeyboardInterrupt:
-            raise SystemExit(0)
+            raise SystemExit(0) from None
     entry = enpass.get_entry(entry_title)
     if not entry:
-        LOGGER.error(f'No password entry found with title of "{entry_title}".')  # pylint: disable=logging-fstring-interpolation
-        raise SystemExit(1)
-    print(entry.password)
-    raise SystemExit(0)
+        LOGGER.error(f'No password entry found with title of "{entry_title}".')
+        raise SystemExit(1) from None
+    print(entry.totp_seed if args.totp else entry.password)
+    raise SystemExit(0) from None
 
 
 if __name__ == '__main__':
