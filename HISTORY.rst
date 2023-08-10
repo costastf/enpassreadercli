@@ -49,3 +49,9 @@ History
 ------------------
 
 * Implement support for pbkdf2-rounds setting as an argument.
+
+
+0.4.1 (10-08-2023)
+------------------
+
+* Fix requirements on the pipeline for upload.
