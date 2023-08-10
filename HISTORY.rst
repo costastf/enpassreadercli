@@ -55,3 +55,9 @@ History
 ------------------
 
 * Fix requirements on the pipeline for upload.
+
+
+0.4.2 (10-08-2023)
+------------------
+
+* Improve error message where pbkdf2 round value could be wrong.
