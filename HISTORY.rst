@@ -43,3 +43,9 @@ History
 ------------------
 
 * Calculate actual totp from provided seed and return that.
+
+
+0.4.0 (10-08-2023)
+------------------
+
+* Implement support for pbkdf2-rounds setting as an argument.
