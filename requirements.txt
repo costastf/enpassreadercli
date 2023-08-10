@@ -8,5 +8,6 @@
 # Please use Pipfile to update the requirements.
 #
 coloredlogs>=15.0.1
-enpassreaderlib>=0.2.2
-prompt-toolkit>=3.0.38
+enpassreaderlib>=0.2.4
+prompt-toolkit>=3.0.39
+pyotp>=2.9.0

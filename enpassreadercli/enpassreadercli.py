@@ -116,6 +116,11 @@ def get_arguments():
                         action=DefaultVariable,
                         variable='ENPASS_DB_PASSWORD',
                         required=True)
+    parser.add_argument('-r', '--pbkdf2-rounds',
+                        help='Specify the number of pbkdf2 rounds, defaults to 320000. ',
+                        dest='pbkdf2_rounds',
+                        type=int,
+                        default=320_000)
     parser.add_argument('-k', '--database-key-file',
                         help=("Specify the path to the enpass database key file if used. "
                               "(Can also be specified using \"ENPASS_DB_KEY_FILE\" environment variable)"),
@@ -195,7 +200,7 @@ def main():
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
     try:
-        enpass = EnpassDB(args.path, args.password, args.key_file)
+        enpass = EnpassDB(args.path, args.password, args.key_file, args.pbkdf2_rounds)
 
         class EnpassCompleter(Completer):
             """Completer for enpass on keypress for the interactive search."""
@@ -206,7 +211,8 @@ def main():
     except EnpassDatabaseError:
         LOGGER.error(('Could not read or decrypt the database. '
                       'Please validate that the path provided is a valid enpass database, '
-                      'and that the provided password and optionally key file are correct.'))
+                      'and that the provided password and optionally key file are correct and that the pbkdf2 rounds'
+                      f'provided ("{args.pbkdf2_rounds}") match the configuration of your database.'))
         raise SystemExit(1) from None
     if args.list:
         for entry in enpass.entries:
