@@ -211,8 +211,8 @@ def main():
     except EnpassDatabaseError:
         LOGGER.error(('Could not read or decrypt the database. '
                       'Please validate that the path provided is a valid enpass database, '
-                      'and that the provided password and optionally key file are correct and that the pbkdf2 rounds'
-                      f'provided ("{args.pbkdf2_rounds}") match the configuration of your database.'))
+                      'that the provided password and optional key file are correct and that the pbkdf2 rounds'
+                      f' provided ("{args.pbkdf2_rounds}") match the configuration of your database.'))
         raise SystemExit(1) from None
     if args.list:
         for entry in enpass.entries:

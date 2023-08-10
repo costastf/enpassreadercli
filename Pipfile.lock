@@ -24,10 +24,10 @@
         },
         "enpassreaderlib": {
             "hashes": [
-                "sha256:c11915fec6878fe66575d3a7063c1ae7b39df289aa12c29baa2d98f52ae987e4"
+                "sha256:d63c984afdd9fe5bcdde293e92cdf52d2bb007d3c816c139854b328743372951"
             ],
             "index": "pypi",
-            "version": "==0.2.4"
+            "version": "==0.2.5"
         },
         "humanfriendly": {
             "hashes": [
