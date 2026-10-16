@@ -48,12 +48,13 @@ To use enpassreadercli from the console:
 
     enpass-reader --help
     usage: enpass-reader [-h] [--log-config LOGGER_CONFIG]
-                              [--log-level {debug,info,warning,error,critical}] -d
-                              PATH -p PASSWORD [-k KEY_FILE] (-g ENTRY | -e | -s)
+                         [--log-level {debug,info,warning,error,critical}] -d
+                         PATH -p PASSWORD [-r PBKDF2_ROUNDS] [-k KEY_FILE]
+                         [-t] [-n] [-F FIELD] (-g ENTRY | -e | -s | -f)
 
     A cli to access enpass 6 encrypted databases and read, list and search values.
 
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
       --log-config LOGGER_CONFIG, -l LOGGER_CONFIG
                             The location of the logging config json file
@@ -66,17 +67,31 @@ To use enpassreadercli from the console:
                             Specify the password to the enpass database. (Can also
                             be specified using "ENPASS_DB_PASSWORD" environment
                             variable)
+      -r PBKDF2_ROUNDS, --pbkdf2-rounds PBKDF2_ROUNDS
+                            Specify the number of pbkdf2 rounds, defaults to
+                            320000.
       -k KEY_FILE, --database-key-file KEY_FILE
                             Specify the path to the enpass database key file if
                             used. (Can also be specified using
                             "ENPASS_DB_KEY_FILE" environment variable)
+      -t, --totp            If set then the value returned for the entry is going
+                            to be the totp if seed is set.
+      -n, --no-totp         If set then the value returned for the entry is going
+                            to be the password. (The default.)
+      -F FIELD, --field FIELD
+                            The label of the field to return the value of instead
+                            of the password, matched case insensitively, falling
+                            back to the field type if no label matches. A totp
+                            field returns its current code. In interactive search,
+                            if not set, the field is prompted for.
       -g ENTRY, --get ENTRY
-                            The name of the entry to get the password of.
-      -e, --enumerate       List all the passwords in the database.
+                            The name of the entry to get the value of.
+      -e, --enumerate       List the value of all the entries in the database that
+                            have it.
       -s, --search          Interactively search for an entry in the database and
-                            return that password.
+                            return its value.
       -f, --fuzzy-search    Interactively fuzzy search for an entry in the
-                            database and return that password.
+                            database and return its value.
 
 
     # Getting one password
@@ -93,11 +108,31 @@ To use enpassreadercli from the console:
     # Search interactively for a password
     enpass-reader -d PATH_TO_DATABASE -p PASSWORD -s
     > Title : (interactive prompt with wildcard searching and autocompletion
-    # after choosing a password from the autocompleted list
+    # after choosing an entry from the autocompleted list and pressing enter at the "Field :" prompt
     > password-value-for-search-entry
 
     # Search interactively with fuzzy search for a password
     enpass-reader -d PATH_TO_DATABASE -p PASSWORD -f
     > Title : (interactive prompt with fuzzy searching and autocompletion
-    # after choosing a password from the autocompleted list
+    # after choosing an entry from the autocompleted list and pressing enter at the "Field :" prompt
     > password-value-for-search-entry
+
+    # Getting a field of an entry by its label (or type), case insensitively
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -g some-entry-name -F "API key"
+    > api-key-value
+
+    # Enumerate a field of all the entries that have it
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -e -F username
+    > entry1-name: username1-value
+    > entry2-name: username2-value
+
+    # Getting the current totp code of an entry
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -g some-entry-name -t
+    > 123456
+
+    # In interactive search, if neither -F nor -t is set, the field is prompted for after the entry is chosen
+    enpass-reader -d PATH_TO_DATABASE -p PASSWORD -f
+    > Title : (interactive prompt with fuzzy searching and autocompletion
+    > Field : (interactive prompt with autocompletion of the field labels of the chosen entry,
+    #          pressing enter without input returns the password)
+    > field-value-for-search-entry

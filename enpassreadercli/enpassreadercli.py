@@ -76,11 +76,115 @@ class DefaultVariable(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-def get_arguments():
+class EnpassCompleter(Completer):
+    """Completer for enpass on keypress for the interactive search."""
+
+    def __init__(self, enpass):
+        self.enpass = enpass
+
+    def get_completions(self, document, complete_event):
+        for match in [entry.title for entry in self.enpass.search_entries(document.text)]:
+            yield Completion(match, start_position=-len(document.text))
+
+
+class FieldCompleter(Completer):
+    """Completer for the field labels of an entry for the interactive search."""
+
+    def __init__(self, labels):
+        self.labels = list(dict.fromkeys(label for label in labels if label))
+
+    def get_completions(self, document, complete_event):
+        text = document.text.lower()
+        for label in self.labels:
+            if text in label.lower():
+                yield Completion(label, start_position=-len(document.text))
+
+
+def get_totp_code(seed):
+    """
+    Calculates the current totp code of a totp seed.
+
+    Args:
+        seed: The totp seed to calculate the code for.
+
+    Returns:
+        totp (str): The current totp code if a seed is provided else None.
+
+    """
+    if not seed:
+        return None
+    return pyotp.TOTP(seed.replace(' ', '')).now()
+
+
+def get_totp(entry):
+    """
+    Calculates the current totp code of an entry.
+
+    Args:
+        entry: The entry to calculate the totp code for.
+
+    Returns:
+        totp (str): The current totp code if the entry has a totp seed else None.
+
+    """
+    return get_totp_code(entry.totp_seed)
+
+
+def get_field(entry, name):
+    """
+    Retrieves the first field of an entry matching a label or type.
+
+    Fields are matched case insensitively on their label first and on their type if no label matches,
+    the same way enpassreaderlib matches them.
+
+    Args:
+        entry: The entry to retrieve the field from.
+        name: The label or type of the field to retrieve.
+
+    Returns:
+        field (Field): The first matching field if match found else None.
+
+    """
+    name = name.lower()
+    by_label = [field for field in entry.fields if (field.label or '').lower() == name]
+    by_type = [field for field in entry.fields if (field.type or '').lower() == name]
+    return next(iter(by_label or by_type), None)
+
+
+def get_value(entry, field=None, totp=False):
+    """
+    Retrieves the requested value of an entry.
+
+    Args:
+        entry: The entry to retrieve the value from.
+        field: The label or type of the field to retrieve, the password is retrieved if not provided.
+            The current totp code is retrieved for a totp field instead of its seed.
+        totp: If set the current totp code is retrieved.
+
+    Returns:
+        value (str): The requested value if the entry has it else None.
+
+    """
+    if totp:
+        return get_totp(entry)
+    if field is not None:
+        match = get_field(entry, field)
+        if not match:
+            return None
+        return get_totp_code(match.value) if (match.type or '').lower() == 'totp' else match.value
+    return entry.password
+
+
+def get_arguments(arguments=None):
     """
     Gets us the cli arguments.
 
-    Returns the args as parsed from the argsparser.
+    Args:
+        arguments: The arguments to parse, the command line arguments are parsed if not provided.
+
+    Returns:
+        args (Namespace): The args as parsed from the argsparser.
+
     """
     # https://docs.python.org/3/library/argparse.html
     parser = argparse.ArgumentParser(description='A cli to access enpass 6 encrypted databases and read, '
@@ -136,28 +240,41 @@ def get_arguments():
                         action='store_true')
     parser.add_argument('-n',
                         '--no-totp',
-                        help='If set then the value returned for the entry is going to he the password. (The default.)',
+                        help='If set then the value returned for the entry is going to be the password. (The default.)',
                         dest='totp',
                         action='store_false')
+    parser.add_argument('-F',
+                        '--field',
+                        help=('The label of the field to return the value of instead of the password, '
+                              'matched case insensitively, falling back to the field type if no label matches. '
+                              'A totp field returns its current code. '
+                              'In interactive search, if not set, the field is prompted for.'),
+                        dest='field',
+                        action='store',
+                        default=None)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-g", "--get",
-                       help="The name of the entry to get the password of.",
+                       help="The name of the entry to get the value of.",
                        dest='entry',
                        action='store')
     group.add_argument("-e", "--enumerate",
-                       help="List all the passwords in the database.",
+                       help="List the value of all the entries in the database that have it.",
                        action="store_true",
                        dest='list')
     group.add_argument("-s", "--search",
-                       help="Interactively search for an entry in the database and return that password.",
+                       help="Interactively search for an entry in the database and return its value.",
                        action="store_true",
                        dest='search')
     group.add_argument("-f", "--fuzzy-search",
-                       help="Interactively fuzzy search for an entry in the database and return that password.",
+                       help="Interactively fuzzy search for an entry in the database and return its value.",
                        action="store_true",
                        dest='fuzzy')
     parser.set_defaults(totp=False)
-    args = parser.parse_args()
+    args = parser.parse_args(arguments)
+    if args.field is not None and not args.field.strip():
+        parser.error('argument -F/--field: expected a non empty label or type')
+    if args.field and args.totp:
+        parser.error('argument -F/--field: not allowed with argument -t/--totp')
     return args
 
 
@@ -190,6 +307,49 @@ def setup_logging(level, config_file=None):
         coloredlogs.install(level=level.upper())
 
 
+def interactive_prompt(message, completer, fuzzy):
+    """
+    Prompts the user interactively with autocompletion.
+
+    Args:
+        message: The message of the prompt.
+        completer: The completer providing the autocompletion.
+        fuzzy: If set the autocompletion is fuzzy.
+
+    Returns:
+        text (str): The text the user provided.
+
+    """
+    try:
+        return prompt(message, completer=FuzzyCompleter(completer) if fuzzy else completer)
+    except (KeyboardInterrupt, EOFError):
+        raise SystemExit(0) from None
+
+
+def get_missing_value_message(entry, field=None, totp=False):
+    """
+    Composes the error message for an entry missing the requested value.
+
+    Args:
+        entry: The entry missing the value.
+        field: The label or type of the requested field if any.
+        totp: If set the totp code was requested.
+
+    Returns:
+        message (str): The error message.
+
+    """
+    if totp:
+        return f'Entry with title of "{entry.title}" does not have a totp seed set.'
+    if field:
+        if get_field(entry, field):
+            return f'Field with label or type of "{field}" in entry with title of "{entry.title}" has no value set.'
+        labels = ', '.join(f'"{label}"' for label in FieldCompleter(entry.field_labels).labels) or 'none'
+        return f'No field found with label or type of "{field}" in entry with title of "{entry.title}". ' \
+               f'Available field labels are: {labels}.'
+    return f'Entry with title of "{entry.title}" does not have a password set.'
+
+
 def main():
     """
     Main method.
@@ -201,13 +361,6 @@ def main():
     setup_logging(args.log_level, args.logger_config)
     try:
         enpass = EnpassDB(args.path, args.password, args.key_file, args.pbkdf2_rounds)
-
-        class EnpassCompleter(Completer):
-            """Completer for enpass on keypress for the interactive search."""
-
-            def get_completions(self, document, complete_event):
-                for match in [entry.title for entry in enpass.search_entries(document.text)]:
-                    yield Completion(match, start_position=-len(document.text))
     except EnpassDatabaseError:
         LOGGER.error(('Could not read or decrypt the database. '
                       'Please validate that the path provided is a valid enpass database, '
@@ -216,22 +369,25 @@ def main():
         raise SystemExit(1) from None
     if args.list:
         for entry in enpass.entries:
-            print(f'{entry.title}: '
-                  f'{pyotp.TOTP(entry.totp_seed.replace(" ", "")).now() if args.totp else entry.password}')
+            value = get_value(entry, args.field, args.totp)
+            if value is not None:
+                print(f'{entry.title}: {value}')
         raise SystemExit(0)
-    if args.entry:
-        entry_title = args.entry
-    elif args.search or args.fuzzy:
-        try:
-            entry_title = prompt('Title :',
-                                 completer=EnpassCompleter() if args.search else FuzzyCompleter(EnpassCompleter()))
-        except KeyboardInterrupt:
-            raise SystemExit(0) from None
+    interactive = args.search or args.fuzzy
+    entry_title = interactive_prompt('Title :', EnpassCompleter(enpass), args.fuzzy) if interactive else args.entry
     entry = enpass.get_entry(entry_title)
     if not entry:
-        LOGGER.error(f'No password entry found with title of "{entry_title}".')
+        LOGGER.error(f'No entry found with title of "{entry_title}".')
         raise SystemExit(1) from None
-    print(pyotp.TOTP(entry.totp_seed.replace(" ", "")).now() if args.totp else entry.password)
+    field = args.field
+    if interactive and not field and not args.totp:
+        field = interactive_prompt('Field :', FieldCompleter(entry.field_labels), args.fuzzy)
+        field = field if field.strip() else None
+    value = get_value(entry, field, args.totp)
+    if value is None:
+        LOGGER.error(get_missing_value_message(entry, field, args.totp))
+        raise SystemExit(1) from None
+    print(value)
     raise SystemExit(0) from None
 
 
