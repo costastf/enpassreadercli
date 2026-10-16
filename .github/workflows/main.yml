@@ -19,10 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9.15
-
-      - name: Install system dependencies for pysqlcipher3
-        run: sudo apt install sqlcipher libsqlcipher0 libsqlcipher-dev
+          python-version: "3.11"
 
       - name: Install pipenv
         run: pip install pipenv
@@ -49,10 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9.15
-
-      - name: Install system dependencies for pysqlcipher3
-        run: sudo apt install sqlcipher libsqlcipher0 libsqlcipher-dev
+          python-version: "3.11"
 
       - name: Install pipenv
         run: pip install pipenv

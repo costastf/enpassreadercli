@@ -46,7 +46,7 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
             return MagicMock()
 
-MOCK_MODULES = ['pysqlcipher3', 'pycryptodome']
+MOCK_MODULES = ['sqlcipher3', 'pycryptodome']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
