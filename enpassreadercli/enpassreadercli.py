@@ -39,7 +39,9 @@ import argparse
 import coloredlogs
 import pyotp
 from enpassreaderlib import EnpassDB
-from enpassreaderlib.enpassreaderlibexceptions import EnpassDatabaseError
+from enpassreaderlib.enpassreaderlibexceptions import (EnpassDatabaseError,
+                                                       EnpassDecryptionError,
+                                                       EnpassKeyfileError)
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import Completer, Completion, FuzzyCompleter
 
@@ -350,6 +352,97 @@ def get_missing_value_message(entry, field=None, totp=False):
     return f'Entry with title of "{entry.title}" does not have a password set.'
 
 
+def open_database(args):
+    """
+    Opens the enpass database.
+
+    Args:
+        args: The parsed cli arguments.
+
+    Returns:
+        enpass (EnpassDB): The opened database, exits with an error if it cannot be opened.
+
+    """
+    if not os.path.isfile(args.path):
+        LOGGER.error(f'The database file "{args.path}" does not exist.')
+        raise SystemExit(1)
+    try:
+        return EnpassDB(args.path, args.password, args.key_file, args.pbkdf2_rounds)
+    except EnpassKeyfileError:
+        LOGGER.error(f'The key file "{args.key_file}" does not hold a valid enpass key.')
+        raise SystemExit(1) from None
+    except EnpassDatabaseError:
+        LOGGER.error(('Could not read or decrypt the database. '
+                      'Please validate that the path provided is a valid enpass database, '
+                      'that the provided password and optional key file are correct and that the pbkdf2 rounds'
+                      f' provided ("{args.pbkdf2_rounds}") match the configuration of your database.'))
+        raise SystemExit(1) from None
+
+
+def list_values(enpass, field=None, totp=False):
+    """
+    Prints the requested value of all the entries that have it.
+
+    Entries whose value fails authentication are reported and skipped.
+
+    Args:
+        enpass: The opened database.
+        field: The label or type of the field to list, the password is listed if not provided.
+        totp: If set the current totp code is listed.
+
+    Returns:
+        exit_code (int): 0 if all values could be decrypted else 1.
+
+    """
+    exit_code = 0
+    for entry in enpass.entries:
+        try:
+            value = get_value(entry, field, totp)
+        except EnpassDecryptionError:
+            LOGGER.error(f'The value of entry with title of "{entry.title}" failed authentication, skipping.')
+            exit_code = 1
+            continue
+        if value is not None:
+            print(f'{entry.title}: {value}')
+    return exit_code
+
+
+def run(args, enpass):
+    """
+    Executes the requested action against the opened database.
+
+    Args:
+        args: The parsed cli arguments.
+        enpass: The opened database.
+
+    Returns:
+        exit_code (int): The exit code of the cli.
+
+    """
+    if args.list:
+        return list_values(enpass, args.field, args.totp)
+    interactive = args.search or args.fuzzy
+    entry_title = interactive_prompt('Title :', EnpassCompleter(enpass), args.fuzzy) if interactive else args.entry
+    entry = enpass.get_entry(entry_title)
+    if not entry:
+        LOGGER.error(f'No entry found with title of "{entry_title}".')
+        return 1
+    field = args.field
+    if interactive and not field and not args.totp:
+        field = interactive_prompt('Field :', FieldCompleter(entry.field_labels), args.fuzzy)
+        field = field if field.strip() else None
+    try:
+        value = get_value(entry, field, args.totp)
+    except EnpassDecryptionError:
+        LOGGER.error(f'The value of entry with title of "{entry.title}" failed authentication and cannot be trusted.')
+        return 1
+    if value is None:
+        LOGGER.error(get_missing_value_message(entry, field, args.totp))
+        return 1
+    print(value)
+    return 0
+
+
 def main():
     """
     Main method.
@@ -359,36 +452,9 @@ def main():
     """
     args = get_arguments()
     setup_logging(args.log_level, args.logger_config)
-    try:
-        enpass = EnpassDB(args.path, args.password, args.key_file, args.pbkdf2_rounds)
-    except EnpassDatabaseError:
-        LOGGER.error(('Could not read or decrypt the database. '
-                      'Please validate that the path provided is a valid enpass database, '
-                      'that the provided password and optional key file are correct and that the pbkdf2 rounds'
-                      f' provided ("{args.pbkdf2_rounds}") match the configuration of your database.'))
-        raise SystemExit(1) from None
-    if args.list:
-        for entry in enpass.entries:
-            value = get_value(entry, args.field, args.totp)
-            if value is not None:
-                print(f'{entry.title}: {value}')
-        raise SystemExit(0)
-    interactive = args.search or args.fuzzy
-    entry_title = interactive_prompt('Title :', EnpassCompleter(enpass), args.fuzzy) if interactive else args.entry
-    entry = enpass.get_entry(entry_title)
-    if not entry:
-        LOGGER.error(f'No entry found with title of "{entry_title}".')
-        raise SystemExit(1) from None
-    field = args.field
-    if interactive and not field and not args.totp:
-        field = interactive_prompt('Field :', FieldCompleter(entry.field_labels), args.fuzzy)
-        field = field if field.strip() else None
-    value = get_value(entry, field, args.totp)
-    if value is None:
-        LOGGER.error(get_missing_value_message(entry, field, args.totp))
-        raise SystemExit(1) from None
-    print(value)
-    raise SystemExit(0) from None
+    with open_database(args) as enpass:
+        exit_code = run(args, enpass)
+    raise SystemExit(exit_code)
 
 
 if __name__ == '__main__':

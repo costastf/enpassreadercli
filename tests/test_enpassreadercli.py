@@ -33,6 +33,11 @@ Tests for `enpassreadercli` module.
 
 """
 
+import argparse
+import contextlib
+import io
+import os
+import tempfile
 import unittest as std_unittest
 
 from betamax.fixtures import unittest
@@ -40,7 +45,7 @@ from enpassreaderlib.enpassreaderlib import Entry
 from prompt_toolkit.document import Document
 
 from enpassreadercli.enpassreadercli import (FieldCompleter, get_arguments, get_missing_value_message, get_totp,
-                                             get_value)
+                                             get_value, list_values, open_database, run)
 
 __author__ = '''Costas Tyfoxylos <costas.tyf@gmail.com>'''
 __docformat__ = '''google'''
@@ -72,17 +77,17 @@ class TestEnpassreadercli(unittest.BetamaxTestCase):
         pass
 
 
-def build_entry(fields, totp_seed=None):
-    """Builds an entry with non sensitive fields and no password."""
+def build_entry(fields, totp_seed=None, title='Service', sensitive=False):
+    """Builds an entry with no password, sensitive fields hold their raw stored value."""
     row = {'key': bytes(44),
-           'title': 'Service',
+           'title': title,
            'uuid': '00000000-0000-0000-0000-000000000000',
            'password_value': None,
            'password_value_hash': None,
            'totp_value': totp_seed,
            'totp_value_hash': None,
            'totp_value_sensitive': 0}
-    field_rows = [{'label': label, 'type': type_, 'value': value, 'sensitive': 0}
+    field_rows = [{'label': label, 'type': type_, 'value': value, 'sensitive': int(sensitive)}
                   for label, type_, value in fields]
     return Entry(row, field_rows)
 
@@ -155,3 +160,65 @@ class TestArguments(std_unittest.TestCase):
     def test_empty_field_is_rejected(self):
         with self.assertRaises(SystemExit):
             get_arguments(['-d', 'db', '-p', 'pass', '-g', 'Service', '-F', ''])
+
+
+class FakeDatabase:
+    """Stands in for an opened EnpassDB holding the provided entries."""
+
+    def __init__(self, entries):
+        self.entries = entries
+
+    def get_entry(self, name):
+        return next((entry for entry in self.entries if entry.title.lower() == name.lower()), None)
+
+
+# A value that is not a valid gcm ciphertext and tag for the entry key so it fails authentication
+TAMPERED_VALUE = '00' * 24
+
+
+class TestTamperedValues(std_unittest.TestCase):
+
+    def setUp(self):
+        self.database = FakeDatabase([build_entry([('API key', 'text', TAMPERED_VALUE)], title='Bad', sensitive=True),
+                                      build_entry([('API key', 'text', 'key-value')], title='Good')])
+
+    def test_listing_skips_tampered_entries_and_fails(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), self.assertLogs('enpassreadercli', level='ERROR'):
+            exit_code = list_values(self.database, 'api key')
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(output.getvalue(), 'Good: key-value\n')
+
+    def test_single_tampered_entry_fails(self):
+        args = get_arguments(['-d', 'db', '-p', 'pass', '-g', 'Bad', '-F', 'api key'])
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), self.assertLogs('enpassreadercli', level='ERROR'):
+            exit_code = run(args, self.database)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(output.getvalue(), '')
+
+
+class TestOpenDatabase(std_unittest.TestCase):
+
+    @staticmethod
+    def arguments(path, key_file=''):
+        return argparse.Namespace(path=path, password='pass', key_file=key_file, pbkdf2_rounds=1)
+
+    def test_missing_database_fails_without_creating_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, 'missing.enpassdb')
+            with self.assertLogs('enpassreadercli', level='ERROR'), self.assertRaises(SystemExit):
+                open_database(self.arguments(path))
+            self.assertFalse(os.path.exists(path))
+
+    def test_invalid_key_file_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, 'vault.enpassdb')
+            key_file = os.path.join(directory, 'vault.enpassdbx')
+            with open(path, 'wb') as database:
+                database.write(b'not an enpass database' * 64)
+            with open(key_file, 'w', encoding='utf-8') as key:
+                key.write('<key>not hex</key>')
+            with self.assertLogs('enpassreadercli', level='ERROR') as logs, self.assertRaises(SystemExit):
+                open_database(self.arguments(path, key_file))
+            self.assertIn('key file', logs.output[0])
