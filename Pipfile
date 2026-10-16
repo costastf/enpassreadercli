@@ -28,6 +28,6 @@ toml = ">=0.10,<1.0"
 [packages]
 
 coloredlogs = ">=15.0,<16.0"
-enpassreaderlib = ">=0.3.0,<1.0"
+enpassreaderlib = ">=0.4.0,<1.0"
 prompt-toolkit = ">=3.0,<4.0"
 pyotp = ">=2.8.0,<3.0"

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "427682e413a4aff39a2860f7ed5dec5765f553dde49c2db8cff6e0e58a890627"
+            "sha256": "73e7adf733b348b796d9c99223e69cdc1c25e3f42f183f67aa6ff97b991a2fba"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -27,10 +27,11 @@
         },
         "enpassreaderlib": {
             "hashes": [
-                "sha256:279464b25c76df2cc35091bc47d9ecca63efce4a011eacc55395f00971af33b9"
+                "sha256:d7bc90e057dcf19865cd4864b15312a28489832edd54a42701502c545eda293e"
             ],
             "index": "pypi",
-            "version": "==0.3.0"
+            "markers": "python_version >= '3.11'",
+            "version": "==0.4.0"
         },
         "humanfriendly": {
             "hashes": [
