@@ -61,3 +61,10 @@ History
 ------------------
 
 * Improve error message where pbkdf2 round value could be wrong.
+
+
+0.5.0 (16-10-2026)
+------------------
+
+* - Read any field of an entry by label with -F/--field, prompting for it in interactive search.
+* - Do not crash on entries without a totp seed. Require Python 3.11 and enpassreaderlib 0.3.0.
