@@ -68,3 +68,9 @@ History
 
 * - Read any field of an entry by label with -F/--field, prompting for it in interactive search.
 * - Do not crash on entries without a totp seed. Require Python 3.11 and enpassreaderlib 0.3.0.
+
+
+0.5.1 (16-10-2026)
+------------------
+
+* Bump dependencies.
