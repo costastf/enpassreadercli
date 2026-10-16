@@ -74,3 +74,12 @@ History
 ------------------
 
 * Bump dependencies.
+
+
+0.5.2 (16-10-2026)
+------------------
+
+* Require enpassreaderlib 0.4.1 which verifies the authentication tag of encrypted values and opens the database read only.
+* Report values that fail authentication instead of crashing, skipping them when enumerating and exiting with an error.
+* Report invalid key files and missing database paths with their own error messages.
+* Close the database connection when done.
